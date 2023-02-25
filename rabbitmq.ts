@@ -19,10 +19,18 @@ interface publishMetadata {
   timestamp: string
 }
 
-export interface rpcResponse {
+export interface consumerRpcResponse {
   readonly data: any
   resolve?: (value: any) => void
   reject?: (err: any) => void
+}
+
+export interface consumerOverwriteResponse {
+  correlationId?: string
+  replyTo?: string
+  contentType?: string
+  timestamp?: string
+  data: Record<string, any> | any[]
 }
 
 export class RabbitMQ {
@@ -38,7 +46,7 @@ export class RabbitMQ {
   }
   private requestPublishMetadata: publishMetadata[] = []
   private mutex: InstanceType<typeof Mutex> | undefined = undefined
-  private rpcResponse: rpcResponse = {
+  private rpcResponse: consumerRpcResponse = {
     data: '',
     resolve: Promise.resolve,
     reject: Promise.reject
@@ -119,7 +127,7 @@ export class RabbitMQ {
       if (d.correlationId == delivery.properties.correlationId) {
         this.rpcResponse.resolve(JSON.parse(delivery.content.toString()))
       } else {
-        this.rpcResponse.resolve(undefined)
+        this.rpcResponse.resolve(JSON.stringify({ data: '' }))
       }
     }
   }
@@ -172,6 +180,67 @@ export class RabbitMQ {
       })
     } catch (err: any) {
       return this.rpcResponse.reject(`Publisher error: ${err.message}`)
+    }
+  }
+
+  async consumerRpc(queue: string, consumerOverwriteResponse?: consumerOverwriteResponse): Promise<void> {
+    console.info('START SERVER CONSUMER RPC -> %s', queue)
+
+    try {
+      const con: Connection = await this.amqpConnection()
+      const ch: Channel = await this.amqpChannel(con)
+
+      const assertExchange: Replies.AssertExchange = await ch.assertExchange(this.exchangeName, exchangeType.Direct, { durable: true })
+      const assertQueue: Replies.AssertQueue = await ch.assertQueue(queue, { durable: true, autoDelete: false })
+
+      await ch.bindExchange(assertExchange.exchange, assertExchange.exchange, assertQueue.queue)
+      await ch.bindQueue(assertQueue.queue, assertExchange.exchange, assertQueue.queue)
+
+      await ch.consume(assertQueue.queue, async (delivery: ConsumeMessage): Promise<void> => {
+        console.info('CONSUMER CORRELATIONID: ', delivery.properties.correlationId)
+        console.info('CONSUMER REPLY TO: ', delivery.properties.replyTo)
+
+        let bodyContent: consumerOverwriteResponse = {
+          data: {},
+          correlationId: '',
+          replyTo: '',
+          contentType: '',
+          timestamp: ''
+        }
+
+        if (consumerOverwriteResponse && consumerOverwriteResponse.data) {
+          consumerOverwriteResponse.correlationId = delivery.properties.correlationId
+          consumerOverwriteResponse.replyTo = delivery.properties.replyTo
+          consumerOverwriteResponse.contentType = delivery.properties.contentType
+          consumerOverwriteResponse.timestamp = new Date().toISOString()
+
+          bodyContent = consumerOverwriteResponse
+        } else {
+          bodyContent.data = JSON.parse(delivery.content.toString())
+          bodyContent.correlationId = delivery.properties.correlationId
+          bodyContent.replyTo = delivery.properties.replyTo
+          bodyContent.contentType = delivery.properties.contentType
+          bodyContent.timestamp = new Date().toISOString()
+        }
+
+        const isPublish: boolean = await ch.sendToQueue(delivery.properties.replyTo, Buffer.from(JSON.stringify(bodyContent)), {
+          persistent: true,
+          correlationId: delivery.properties.correlationId,
+          replyTo: delivery.properties.replyTo,
+          contentType: delivery.properties.contentType,
+          expiration: delivery.properties.expiration
+        })
+
+        for (let d of this.requestPublishMetadata) {
+          if (!isPublish || d.correlationId != delivery.properties.correlationId) {
+            ch.nack(delivery, false, true)
+          }
+        }
+
+        ch.ack(delivery)
+      })
+    } catch (err: any) {
+      console.error(`Consumer error: ${err.message}`)
     }
   }
 }

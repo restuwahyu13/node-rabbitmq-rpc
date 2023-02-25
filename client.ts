@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker'
-import { RabbitMQ, rpcResponse } from './rabbitmq'
+import { RabbitMQ, consumerRpcResponse } from './rabbitmq'
 
 const requestData: Record<string, any> = {
   id: faker.datatype.uuid(),
@@ -11,6 +11,6 @@ const requestData: Record<string, any> = {
 
 const rabbitmq: InstanceType<typeof RabbitMQ> = new RabbitMQ()
 
-rabbitmq.publishRpc('account', requestData).then((value: rpcResponse) => {
-  console.log(JSON.parse(value.data))
+rabbitmq.publishRpc('account', requestData).then((value: consumerRpcResponse) => {
+  console.log(`From consumer rpc in client rpc: `, value)
 })
