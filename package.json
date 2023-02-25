@@ -1,0 +1,44 @@
+{
+  "name": "node-rabbitmq-rpc",
+  "version": "0.0.1",
+  "description": "Example rabbitmq rpc pattern using messaging pattern (Request & Reply)",
+  "scripts": {
+    "cl": "DEBUG=* ts-node client.ts",
+    "sv": "DEBUG=* ts-node server.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/restuwahyu13/node-rabbitmq-rpc.git"
+  },
+  "keywords": [
+    "rabbitmq",
+    "rpc",
+    "node",
+    "message broker"
+  ],
+  "author": "Restu Wahyu Saputra",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/restuwahyu13/node-rabbitmq-rpc/issues"
+  },
+  "homepage": "https://github.com/restuwahyu13/node-rabbitmq-rpc#readme",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "async-mutex": "^0.4.0",
+    "delay": "^5.0.0",
+    "dotenv": "^16.0.3",
+    "short-uuid": "^4.2.2",
+    "shortid": "^2.2.16"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^7.6.0",
+    "@types/amqplib": "^0.10.1",
+    "@types/async-lock": "^1.4.0",
+    "@types/dotenv": "^8.2.0",
+    "@types/prettier": "^2.7.2",
+    "prettier": "^2.8.4",
+    "ts-node": "^10.9.1",
+    "tslib": "^2.5.0",
+    "typescript": "^4.9.5"
+  }
+}

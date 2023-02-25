@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"outDir": "dist",
+		"target": "ESNext",
+		"module": "CommonJS",
+		"moduleResolution": "Node",
+		"typeRoots": ["node_modules/@types/"],
+		"strict": true,
+		"importHelpers": true,
+		"downlevelIteration": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"allowUmdGlobalAccess": true,
+		"noUnusedLocals": false,
+		"isolatedModules": false,
+		"strictNullChecks": false,
+		"noEmit": false,
+		"noImplicitAny": false,
+		"noImplicitReturns": false,
+		"noImplicitThis": false
+	},
+	"include": ["client.ts", "server.ts", "rabbitmq.ts"],
+	"exclude": ["dist", "node_modules"]
+}
