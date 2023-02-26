@@ -33,7 +33,12 @@ export interface consumerOverwriteResponse {
   data: Record<string, any> | any[]
 }
 
-export class RabbitMQ {
+interface IRabbitMQ {
+  publishRpc(queue: string, body: any): Promise<any>
+  consumerRpc(queue: string, consumerOverwriteResponse?: consumerOverwriteResponse): Promise<void>
+}
+
+export class RabbitMQ implements IRabbitMQ {
   private url: string = ''
   private exchangeName: string = ''
   private uuid: string = ''
@@ -110,8 +115,8 @@ export class RabbitMQ {
 
       ch.consume(assertQueue.queue, (delivery: ConsumeMessage) => {
         if (this.publishMetadata.correlationId != delivery.properties.correlationId) {
-          ch.nack(delivery, false, true)
           this.listeningConsumerRpc(delivery)
+          ch.nack(delivery, false, true)
         }
 
         this.listeningConsumerRpc(delivery)
@@ -132,7 +137,7 @@ export class RabbitMQ {
     }
   }
 
-  async publishRpc(queue: string, data: any): Promise<any> {
+  async publishRpc(queue: string, body: any): Promise<any> {
     console.info('START PUBLISHER RPC -> %s', queue)
 
     try {
@@ -156,7 +161,7 @@ export class RabbitMQ {
       const assertExchange: Replies.AssertExchange = await ch.assertExchange(this.exchangeName, exchangeType.Direct, { durable: true })
       await ch.bindExchange(assertExchange.exchange, assertExchange.exchange, queue)
 
-      const isPublish: boolean = await ch.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
+      const isPublish: boolean = await ch.sendToQueue(queue, Buffer.from(JSON.stringify(body)), {
         persistent: true,
         correlationId: this.publishMetadata.correlationId,
         replyTo: this.publishMetadata.replyTo,
@@ -197,8 +202,8 @@ export class RabbitMQ {
       await ch.bindQueue(assertQueue.queue, assertExchange.exchange, assertQueue.queue)
 
       await ch.consume(assertQueue.queue, async (delivery: ConsumeMessage): Promise<void> => {
-        console.info('CONSUMER CORRELATIONID: ', delivery.properties.correlationId)
-        console.info('CONSUMER REPLY TO: ', delivery.properties.replyTo)
+        console.info('SERVER CONSUMER RPC CORRELATION ID: ', delivery.properties.correlationId)
+        console.info('SERVER CONSUMER RPC REPLY TO: ', delivery.properties.replyTo)
 
         let bodyContent: consumerOverwriteResponse = {
           data: {},
